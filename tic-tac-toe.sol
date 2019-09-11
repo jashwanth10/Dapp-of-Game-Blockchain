@@ -17,6 +17,7 @@ contract TTT{
         uint ngames;
         uint256 stake;
         bool active;
+        bool isRandom;
     }
     
     mapping(uint256 => Game) game;
@@ -26,7 +27,11 @@ contract TTT{
         owner = msg.sender;
     }
     
-    function createGame(uint256 stake) public returns (uint256){
+    function random() private view returns (uint) {
+       return uint(uint256(keccak256(abi.encodePacked(block.timestamp)))%251);
+    }
+    
+    function createGame(uint256 stake, bool randomPlayer) public returns (uint256){
         Game memory g;
         num++;
         g.player1 = msg.sender;
@@ -42,10 +47,16 @@ contract TTT{
         g.ngames = 0;
         g.active = true;
         g.stake = stake;
+        if(randomPlayer){
+            g.isRandom = false;
+        }else{
+            g.isRandom = true;
+        }
         bank.send(msg.sender, owner, stake);
         game[num] = g;
         return num;
     }
+    
     
     function joinGame(uint256 gameId, uint256 stake) public{
         require(game[gameId].active);
@@ -70,11 +81,31 @@ contract TTT{
         if(retadd == game[gameId].player1 && retbool == true){
             game[gameId].winner[1]++;
             restartGame(gameId);
+            return;
         }else if(retadd == game[gameId].player2 && retbool == true){
             game[gameId].winner[2]++;
             restartGame(gameId);
+            return;
         }else if(retadd == address(0) && retbool == true){
             restartGame(gameId);
+            return;
+        }
+        if(game[gameId].isRandom){
+            uint x;
+            uint y;
+            for(uint ii=0;ii<3;ii++){
+                for(uint jj=0;jj<3;jj++){
+                    if(game[gameId].board[i][j] == Symbol.None){
+                        x=i;y=j;
+                        if(random()%2 == 1){
+                            makeMove(gameId, i, j);
+                            return;
+                        }
+                    }
+                }
+            }
+            makeMove(gameId, x, y);
+            return;
         }
     }
     
