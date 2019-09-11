@@ -26,10 +26,21 @@ contract Coin {
 
     // Sends an amount of existing coins
     // from any caller to an address
-    function send(address receiver, uint amount) public {
+    function send(address sender, address receiver, uint amount) private {
+        require(amount <= balances[sender], "Insufficient balance.");
+        balances[sender] -= amount;
+        balances[receiver] += amount;
+        emit Sent(sender, receiver, amount);
+    }
+    
+    function transfer(address receiver, uint amount) public {
         require(amount <= balances[msg.sender], "Insufficient balance.");
         balances[msg.sender] -= amount;
         balances[receiver] += amount;
         emit Sent(msg.sender, receiver, amount);
+    }
+
+    function getBalance() public view returns (uint){
+        return balances[msg.sender];
     }
 }
