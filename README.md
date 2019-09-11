@@ -10,7 +10,7 @@ deploying a dapp(Game based) on ethereum blockchain
 4.)Complete transferring coins fuctionality
 ```
 
-##TO-HANDLE
+## TO-HANDLE
 
 ```
 1.)Set amount must not cross or under limit.
