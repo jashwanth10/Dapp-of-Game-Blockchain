@@ -5,9 +5,9 @@ deploying a dapp(Game based) on ethereum blockchain
 
 ```
 1.)Modify Coin
-2.)Complete code for win patterns
-3.)Complete restartgame functionality
-4.)Complete transferring coins fuctionality
+2.)Complete code for win patterns(completed)
+3.)Complete restartgame functionality(completed)
+4.)Complete transferring coins fuctionality(completed)
 ```
 
 ## TO-HANDLE
