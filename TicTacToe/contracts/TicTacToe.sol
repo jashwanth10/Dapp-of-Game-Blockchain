@@ -4,8 +4,6 @@ contract TicTacToe{
     uint256 num;
     uint256[4] public accBets;
     address payable public owner;
-    uint public test;
-    address public addtest;
     
     struct Game {
         address payable player1;
@@ -24,7 +22,6 @@ contract TicTacToe{
     constructor() public{
         owner = msg.sender;
         num = 0;
-        test = 0;
         for(uint i=0;i<4;i++){
             accBets[i] = 25*(i+1);
         }
@@ -94,10 +91,6 @@ contract TicTacToe{
         game[gameId].player2 = msg.sender;
     }
 
-    
-    function getaddtest() public view returns (address) {
-        return addtest;
-    }
     function makeMove(uint256 gameId, uint i, uint j) public{
         require(game[gameId].active);
         require(i>=0 && i<=2 && j>=0 && j<=2);
