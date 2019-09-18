@@ -2,10 +2,8 @@ pragma solidity >=0.4.0 <0.7.0;
 
 contract TicTacToe{
     uint256 num;
-    enum Symbol{None, play1, play2}
     uint256[4] public accBets;
     address payable public owner;
-    address payable this;
     uint public test;
     address public addtest;
     
@@ -19,6 +17,7 @@ contract TicTacToe{
         uint256 stake;
         bool active;
         bool isRandom;
+        uint256 currt; 
     }
     mapping(uint256 => Game) public game;
     
@@ -61,10 +60,11 @@ contract TicTacToe{
         if(randomPlayer == 0){
             g.isRandom = false;
         }else{
-            g.player2 = address(this);
+            g.player2 = owner;
             g.isRandom = true;
         }
         game[num] = g;
+        game[num].currt = now;
         return num;
     }
     
@@ -76,18 +76,24 @@ contract TicTacToe{
         return game[gameId].winner;
     }
     
+    function claimTimeout(uint256 gameId) public {
+        require(msg.sender == game[gameId].player1 || msg.sender == game[gameId].player2);
+        require(!isValid(msg.sender, gameId));
+        require(now >= game[gameId].currt + 2);
+        game[gameId].active = false;
+        address(msg.sender).transfer(game[gameId].stake);
+    }
+    
     function joinGame(uint256 gameId, uint256 stake) public payable{
         require(game[gameId].active);
+        require(game[gameId].player1 != msg.sender);
         require(game[gameId].isRandom == false);
         require(stake == msg.value);
         require(stake == game[gameId].stake);
         game[gameId].stake += stake;
         game[gameId].player2 = msg.sender;
     }
-    
-    function gettest() public view returns (uint) {
-        return test;
-    }
+
     
     function getaddtest() public view returns (address) {
         return addtest;
@@ -110,11 +116,11 @@ contract TicTacToe{
                 game[gameId].whichPlayerTurn = 1;
             }
         }else{
-            if(game[gameId].player2 == address(this) && game[gameId].whichPlayerTurn == 1){
+            if(game[gameId].player2 == owner && game[gameId].whichPlayerTurn == 1){
                 require(game[gameId].board[i][j] == 0);
                 game[gameId].board[i][j] = 1;
                 game[gameId].whichPlayerTurn = 2;
-            }else if(game[gameId].player2 == address(this) && game[gameId].whichPlayerTurn == 2){
+            }else if(game[gameId].player2 == owner && game[gameId].whichPlayerTurn == 2){
                 require(game[gameId].board[i][j] == 0);
                 game[gameId].board[i][j] = 2;
                 game[gameId].whichPlayerTurn = 1;

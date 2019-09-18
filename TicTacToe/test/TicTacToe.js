@@ -2,7 +2,7 @@ const Tic = artifacts.require("./TicTacToe.sol");
 
 contract('TicTacToe', function(accounts) {
     let instance;
-    let test = accounts[0];
+    let test = accounts[3];
     const ERROR_MSG = 'VM Exception while processing transaction: revert';   
     before(async() =>{
         instance = await Tic.deployed();
@@ -13,8 +13,6 @@ contract('TicTacToe', function(accounts) {
         assert.equal(amount , num, "Ayya");
         
     });
-
-    //*****Unit test for createGame*******
 
     it("Contract gets specified stake amount", async() => {
         const stake = 50;
@@ -105,26 +103,6 @@ contract('TicTacToe', function(accounts) {
         assert.ok(err instanceof Error, ERROR_MSG);
     });
 
-    it("Doesnt allow SecondPlayer Joining filled game slot", async() => {
-        instance = await Tic.deployed();
-        let err = null;
-        let test2 = accounts[1];
-        let test3 = accounts[2];
-
-        const stake = 25;
-        let id = await instance.createGame.call(stake, 0, {from: test, value: stake});
-
-        await instance.createGame(stake, 0, {from:test, value: stake}); 
-        await instance.joinGame(id, stake, {from:test2, value:stake});
-        try {
-            await instance.joinGame(id, stake, {from:test3, value:stake});
-        } catch(error) {
-            err = error;
-        }    
-        game = await instance.game.call(id);
-        assert.ok(err instanceof Error, ERROR_MSG);
-    });
-
     it("Doesnt Allow SecondPlayer Joining RandomPlayer game", async() => {
         instance = await Tic.deployed();
         let err = null;
@@ -142,6 +120,23 @@ contract('TicTacToe', function(accounts) {
         assert.ok(err instanceof Error, ERROR_MSG);
     });
 
+    it("Doesnt Allow ThirdParty Joining game", async() => {
+        instance = await Tic.deployed();
+        let err = null;
+        let test2 = accounts[1];
+
+        const stake = 25;
+        let id = await instance.createGame.call(stake, 0, {from: test, value: stake});
+
+        await instance.createGame(stake, 0, {from:test, value: stake}); 
+        await instance.joinGame(id, stake, {from:test2, value:stake});
+        try {
+            await instance.joinGame(id, stake, {from:accounts[2], value:stake});
+        } catch(error){
+            err = error;
+        }
+        assert.ok(err instanceof Error, ERROR_MSG);
+    });
     //********MakeMove************/
 
     it("Player Makes move in his turn and board gets updated", async() => {
@@ -163,6 +158,33 @@ contract('TicTacToe', function(accounts) {
         await instance.makeMove(id, x+1, y, {from: test2});
         array = await instance.getBoard.call(id);
         assert.equal(array[x+1][y], 2, ERROR_MSG);
+
+    });
+
+    it("Random Player Makes move right after 1st Player's turn and board gets updated", async() => {
+        //Symbol for Player1 is "1" and Symbol for Player2 is 2
+        instance = await Tic.deployed();
+        let err = null;
+
+        const stake = 25;
+        let id = await instance.createGame.call(stake, 1, {from: test, value: stake});
+        await instance.createGame(stake, 1, {from:test, value: stake}); 
+        let x=1;let y =1;    
+        await instance.makeMove(id, x, y, {from: test});
+        let array = await instance.getBoard.call(id);
+        assert.equal(array[x][y], 1, ERROR_MSG);
+
+        array = await instance.getBoard.call(id);
+        let count = 0;
+        for(var i = 0;i < 3;i++){
+            for(var j=0;j<3;j++){
+                if(array[i][j] != 0 && array[i][j] != 1){
+                    assert.equal(array[i][j], 2, ERROR_MSG);
+                    count++;
+                }
+            }
+        }
+        assert(count, 1, ERROR_MSG);
 
     });
 
@@ -188,6 +210,12 @@ contract('TicTacToe', function(accounts) {
         err = null;
         try {
             await instance.makeMove(id, x, y, {from: test2});
+        } catch(error) {
+            err = error;
+        } 
+        assert.ok(err instanceof Error, ERROR_MSG);
+        try {
+            await instance.makeMove(id, 4, 5, {from: test2});
         } catch(error) {
             err = error;
         } 
@@ -242,7 +270,6 @@ contract('TicTacToe', function(accounts) {
         assert.equal(game[1], 0, ERROR_MSG);
         //Here 1st Player is winning Player;
         for(var k=0;k<4;k++){
-            let game = await instance.game.call(id);
             // console.log(game.whichPlayerTurn);
             if(k < 2){
                 let game = await instance.game.call(id);
@@ -265,14 +292,14 @@ contract('TicTacToe', function(accounts) {
         }
     });
 
-    it("Stake gets transferred to the winning Player", async() => {
+    it("Stake gets transferred to the winning Player and Game becomes inactive", async() => {
         //Since transaction is in wei and 1 gwei = 10^9 wei,
         //we need to compare only last 9 digits
+        //Since Transaction costs some gas and some gwei will be cut
         instance = await Tic.deployed();
         let err = null;
         let test2 = accounts[1];
         var current = await web3.eth.getBalance(test);
-        console.log(current);
         const stake = 25;
         var expected = String(BigInt(current) + BigInt(stake));
         expected = expected.slice(-9);
@@ -281,7 +308,6 @@ contract('TicTacToe', function(accounts) {
         await instance.joinGame(id, stake, {from:test2, value:stake});
         //Here 1st Player is winning Player;
         for(var k=0;k<4;k++){
-            // console.log(game.whichPlayerTurn);
             for(var i=0;i<3;i++){
                 if(k < 2){
                     await instance.makeMove(id, 1, i, {from:test});
@@ -295,64 +321,134 @@ contract('TicTacToe', function(accounts) {
             }
             //Board getting reset            
         }
-        
         var actual = await web3.eth.getBalance(test);
         actual = actual.slice(-9);
-
-        // actual = BigInt(actual);
-        console.log(actual);
         assert.equal(expected, actual, ERROR_MSG);
+        let game = await instance.game.call(id);
+        assert.equal(game.active, false, ERROR_MSG);
+
+        //If Player 2 wins:--
+        test2 = accounts[1];
+        current = await web3.eth.getBalance(test2);
+        expected = String(BigInt(current) + BigInt(stake));
+        expected = expected.slice(-9);
+        id = await instance.createGame.call(stake, 0, {from: test, value: stake});
+        // console.log(id.toNumber());
+        await instance.createGame(stake, 0, {from:test, value: stake}); 
+        await instance.joinGame(id, stake, {from:test2, value:stake});
+        //Here 2nd Player is winning Player;
+        for(var k=0;k<4;k++){
+            for(var i=0;i<3;i++){
+                if(k < 2){
+                    if(i!=2)await instance.makeMove(id, 1, i, {from:test});
+                    else await instance.makeMove(id, 0, i, {from:test});                    
+                    await instance.makeMove(id, 2, i, {from:test2});
+                }else{
+                    await instance.makeMove(id, 1, i, {from:test2});
+                    // else await instance.makeMove(id, 1, i, {from:test2});
+                    if(i!=2)await instance.makeMove(id, 2, i, {from:test});
+                }
+                
+            }
+            //Board getting reset            
+        }
+        actual = await web3.eth.getBalance(test2);
+        actual = actual.slice(-9);
+        assert.equal(expected, actual, ERROR_MSG);
+        game = await instance.game.call(id);
+        assert.equal(game.active, false, ERROR_MSG);
+        
+        
     });
-    // it("Random Player Makes a Valid Move")
+    it("Stake gets transferred to the Owner in case of Draw and Game becomes inactive", async() => {
+        //Since transaction is in wei and 1 gwei = 10^9 wei,
+        //we need to compare only last 9 digits
+        //Since Transaction costs some gas and some gwei will be cut
+        instance = await Tic.deployed();
+        let err = null;
+        let test2 = accounts[1];
+        // console.log(await instance.owner.call());
+        var current = await web3.eth.getBalance(await instance.owner.call());
+        // console.log(current);
+        const stake = 25;
+        var expected = String(BigInt(current) + BigInt(2*stake));
+        expected = expected.slice(-9);
+        let id = await instance.createGame.call(stake, 0, {from: test, value: stake});
+        await instance.createGame(stake, 0, {from:test, value: stake}); 
+        await instance.joinGame(id, stake, {from:test2, value:stake});
+        //Here 1st Player is winning Player;
+        for(var k=0;k<4;k++){
+            for(var i=0;i<3;i++){
+                if(k < 2){
+                    await instance.makeMove(id, 1, i, {from:test});
+                    if(i!=2)await instance.makeMove(id, 2, i, {from:test2});
+                }else{
+                    await instance.makeMove(id, 1, i, {from:test2});
+                    // else await instance.makeMove(id, 0, i, {from:test2});
+                    if(i!=2)await instance.makeMove(id, 2, i, {from:test});
+                }
+                
+            }
+            //Board getting reset            
+        }
+        var actual = await web3.eth.getBalance(await instance.owner.call());
+        actual = actual.slice(-9);
+        assert.equal(expected, actual, ERROR_MSG);
+        let game = await instance.game.call(id);
+        assert.equal(game.active, false, ERROR_MSG);
+    });
 
+    it("Correctly claims timeout after 'n' seconds and return all stake amount to the called person", async() =>{
+        instance = await Tic.deployed();
+        test2 = accounts[1];
+        const stake = 25;
+        //Here n = 3 sec
+        let id = await instance.createGame.call(stake, 0, {from: test, value: stake});
+        await instance.createGame(stake, 0, {from:test, value: stake}); 
+        await instance.joinGame(id, stake, {from:test2, value:stake});
+        var current = await web3.eth.getBalance(test2);
+        // console.log(current);
+        var expected = String(BigInt(current) + BigInt(2*stake));
+        expected = expected.slice(-9);
+        // console.log(instance);
+        await new Promise(resolve => setTimeout(resolve, 1000*3));
+        await instance.claimTimeout(id, {from:test2});
+        var actual = await web3.eth.getBalance(test2);
+        actual = actual.slice(-9);
+        let game = await instance.game.call(id);
+        // console.log(game.active);
+        // console.log(actual);
+        assert.equal(expected, actual, ERROR_MSG);
+        
+    });
 
+    it("Shows error if claims timeout before 'n' seconds or claims timeout in his/her turn", async() =>{
+        instance = await Tic.deployed();
+        test2 = accounts[1];
+        const stake = 25;
+        let err = null;
+        //Here n = 3 sec
+        let id = await instance.createGame.call(stake, 0, {from: test, value: stake});
+        await instance.createGame(stake, 0, {from:test, value: stake}); 
+        await instance.joinGame(id, stake, {from:test2, value:stake});
+        var current = await web3.eth.getBalance(test2);
+        // console.log(current);
+        var expected = String(BigInt(current) + BigInt(2*stake));
+        expected = expected.slice(-9);
+        // console.log(instance);
+        await new Promise(resolve => setTimeout(resolve, 1000*1));
+        try {
+            await instance.claimTimeout(id, {from:test2});
+        } catch (error){
+            err = error;
+        }
+        assert.ok(err instanceof Error, ERROR_MSG);      
+        try {
+            await instance.claimTimeout(id, {from:test});
+        } catch (error){
+            err = error;
+        }
+        assert.ok(err instanceof Error, ERROR_MSG);     
+    });
 
-
-
-
-
-
-
-
-
-
-    
-
-
-//   it('should put 10000 MetaCoin in the first account', async () => {
-//     const metaCoinInstance = await MetaCoin.deployed();
-//     const balance = await metaCoinInstance.getBalance.call(accounts[0]);
-
-//     assert.equal(balance.valueOf(), 10000, "10000 wasn't in the first account");
-//   });
-//   it('should call a function that depends on a linked library', async () => {
-//     const metaCoinInstance = await MetaCoin.deployed();
-//     const metaCoinBalance = (await metaCoinInstance.getBalance.call(accounts[0])).toNumber();
-//     const metaCoinEthBalance = (await metaCoinInstance.getBalanceInEth.call(accounts[0])).toNumber();
-
-//     assert.equal(metaCoinEthBalance, 2 * metaCoinBalance, 'Library function returned unexpected function, linkage may be broken');
-//   });
-//   it('should send coin correctly', async () => {
-//     const metaCoinInstance = await MetaCoin.deployed();
-
-//     // Setup 2 accounts.
-//     const accountOne = accounts[0];
-//     const accountTwo = accounts[1];
-
-//     // Get initial balances of first and second account.
-//     const accountOneStartingBalance = (await metaCoinInstance.getBalance.call(accountOne)).toNumber();
-//     const accountTwoStartingBalance = (await metaCoinInstance.getBalance.call(accountTwo)).toNumber();
-
-//     // Make transaction from first account to second.
-//     const amount = 10;
-//     await metaCoinInstance.sendCoin(accountTwo, amount, { from: accountOne });
-
-//     // Get balances of first and second account after the transactions.
-//     const accountOneEndingBalance = (await metaCoinInstance.getBalance.call(accountOne)).toNumber();
-//     const accountTwoEndingBalance = (await metaCoinInstance.getBalance.call(accountTwo)).toNumber();
-
-
-//     assert.equal(accountOneEndingBalance, accountOneStartingBalance - amount, "Amount wasn't correctly taken from the sender");
-//     assert.equal(accountTwoEndingBalance, accountTwoStartingBalance + amount, "Amount wasn't correctly sent to the receiver");
-//   });
 });
