@@ -35,13 +35,15 @@ App = {
 
   initContract: function() {
     acc = web3.eth.accounts[0];
-    
+    $.get("http://localhost:8080", function(data){
+      console.log(data);
+    });
     $.getJSON('Basic.json', function(data) {
       // Get the necessary contract artifact file and instantiate it with truffle-contract
       var AdoptionArtifact = data;
       App.contracts.Basic = TruffleContract(AdoptionArtifact);
       console.log(App.contracts.Basic);
-    
+      
       // Set the provider for our contract
       App.contracts.Basic.setProvider(App.web3Provider);
     
@@ -49,17 +51,26 @@ App = {
       return App.markAdopted();
     });
 
-    return App.bindEvents();
+    // return App.bindEvents();
   },
 
   bindEvents: function() {
+    App.contracts.Basic.deployed().then(function(instance){
+            con = instance;
+            console.log(con.x);
+    })
+    console.log("enter bid events");
     $(document).on('click', '.one', App.handleAdopt);
     $(document).on('click', '.multi', App.handleAdopt1);
 
   },
 
   markAdopted: function(adopters, account) {
-    console.log("HIHIIII")
+    console.log("mark adopted");
+    App.contracts.Basic.deployed().then(function(instance){
+      con = instance;
+      console.log(con.x);
+    });
   },
 
   handleAdopt: function(event) {
@@ -117,6 +128,7 @@ $(function() {
   //     App.init();
   // });
   $("#sign").click(function(event){
+    event.preventDefault();
     App.init();
   });
   
