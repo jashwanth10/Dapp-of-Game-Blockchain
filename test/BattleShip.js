@@ -494,6 +494,47 @@ contract('BattleShip',function(accounts){
         await instance.insert(id,4,1,4,5,5,{from:test2});
 
 
+
+        // move
+
+        await instance.move(id,8,8,{from:test});
+        await instance.move(id,0,1,{from:test2});
+        await instance.move(id,1,2,{from:test});
+        await instance.move(id,0,2,{from:test2});
+
+        await instance.move(id,2,1,{from:test});
+        await instance.move(id,1,1,{from:test2});
+        await instance.move(id,2,2,{from:test});
+        await instance.move(id,1,2,{from:test2});
+        await instance.move(id,2,3,{from:test});
+        await instance.move(id,1,3,{from:test2});
+
+        await instance.move(id,3,1,{from:test});
+        await instance.move(id,2,1,{from:test2});
+        await instance.move(id,3,2,{from:test});
+        await instance.move(id,2,2,{from:test2});
+        await instance.move(id,3,3,{from:test});
+        await instance.move(id,2,3,{from:test2});
+        await instance.move(id,3,4,{from:test});
+        await instance.move(id,2,4,{from:test2});
+
+        await instance.move(id,4,1,{from:test});
+        await instance.move(id,3,1,{from:test2});
+        await instance.move(id,4,2,{from:test});
+        await instance.move(id,3,2,{from:test2});
+        await instance.move(id,4,3,{from:test});
+        await instance.move(id,3,3,{from:test2});
+        await instance.move(id,4,4,{from:test});
+        await instance.move(id,3,4,{from:test2});
+        await instance.move(id,4,5,{from:test});
+        await instance.move(id,3,5,{from:test2});
+
+
+        games = await instance.games.call(id);
+        //console.log(games.status);
+        assert.equal(games.status,2,ERROR_MSG);
+
+
     })
 
 });
