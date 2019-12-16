@@ -18,6 +18,7 @@ App = {
         // User denied account access...
         console.error("User denied account access")
         console.log("error")
+        console.log("This is test for github learn")
       }
     }
     // Legacy dapp browsers...
